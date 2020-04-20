@@ -1,8 +1,8 @@
 
 class BufferStream {
     
-    constructor() {
-        this.buf;
+    constructor(buf=undefined) {
+        this.buf = buf;
     }
     
     set(buf) {
@@ -11,7 +11,8 @@ class BufferStream {
     }
     
     read(length) {
-        return buf.slice(this.offset, this.offset + length);        
+        this.offset += length;
+        return buf.slice(this.offset - length, this.offset);        
     }
     
     setOffset(offset) {
