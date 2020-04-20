@@ -22,7 +22,7 @@ class RmtpChunkStreamHandler {
     }
     
 
-    static function parseBasicHeader(chunk) {
+    static parseBasicHeader(chunk) {
         let basic_header = chunk.read(1).readUIntBE(0, 1);
         let basic_header_size = 1;
         //First two bits
@@ -47,7 +47,7 @@ class RmtpChunkStreamHandler {
         };
     }
     
-    function parseMessageHeader(fmt, chunk) {
+    parseMessageHeader(fmt, chunk) {
         let chunk_data;
         switch(fmt) {
             case 0:
@@ -123,7 +123,7 @@ class RmtpChunkStreamHandler {
         };  
     }
 
-    function parseChunk(basicHeader, chunk) {
+    parseChunk(basicHeader, chunk) {
         
         let message = this.parseMessageHeader(basicHeader['fmt'], chunk);
         
@@ -135,7 +135,7 @@ class RmtpChunkStreamHandler {
         return message;
 }
     
-    function parseProtocolControlMessage(message) {
+    parseProtocolControlMessage(message) {
         
         //protocol control message
             /*

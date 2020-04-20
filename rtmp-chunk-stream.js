@@ -9,11 +9,11 @@ class RtmpChunkStream {
         this.event_handler = event_handler;
     }
     
-    function registerNewChunkStreamHandler(cs_id) {
+    registerNewChunkStreamHandler(cs_id) {
         
     }
     
-    function recv(packet) {
+    recv(packet) {
         
     }
     
