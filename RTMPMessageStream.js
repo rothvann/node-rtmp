@@ -1,11 +1,12 @@
 const EventEmitter = require('events');
+const RTMPMessageStreamHandler = require('./RTMPMessageStreamHandler');
 
 class RTMPMessageStream extends EventEmitter {
   constructor(messageTransport) {
     super();
 
     this.messageStreamHandlers = new Map();
-    this.messageStreamHandlers.set(0, new MessageStreamHandler(this.emit));
+    this.messageStreamHandlers.set(0, new RTMPMessageStreamHandler(this.emit));
 
     this.onMessage = this.onMessage.bind(this);
     this.messageTransport = messageTransport;
@@ -21,8 +22,8 @@ class RTMPMessageStream extends EventEmitter {
   }
 
   onMessage(message) {
-    if (messageStreamHandlers.has(message.stream_id)) {
-      this.messageStreamHandlers.get(message.stream_id).onMessage(message);
+    if (messageStreamHandlers.has(message.streamId)) {
+      this.messageStreamHandlers.get(message.streamId).onMessage(message);
     } else {
       // log error invalid stream id
     }

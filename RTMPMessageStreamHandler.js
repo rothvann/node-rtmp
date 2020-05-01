@@ -5,7 +5,7 @@ class RTMPMessageStreamHandler {
   }
 
   onMessage(message) {
-    switch (message.type_id) {
+    switch (message.typeId) {
 
 
     }
