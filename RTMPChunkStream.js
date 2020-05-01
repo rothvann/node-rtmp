@@ -16,7 +16,8 @@ class RTMPChunkStream extends EventEmitter {
   onData(data) {
     const basicHeader = RTMPChunkStreamHandler.parseBasicHeader(data);
     if (!this.chunk_streams.has(basicHeader.chunkStreamId)) {
-      this.chunk_streams.set(basicHeader.chunkStreamId, new RTMPChunkStreamHandler(this.emit));
+      const handler = new RTMPChunkStreamHandler(this.emit.bind(this));
+      this.chunk_streams.set(basicHeader.chunkStreamId, handler);
     }
     this.chunkStreams.get(basicHeader.chunkStreamId).parseChunk(basicHeader, data);
   }

@@ -6,7 +6,7 @@ class RTMPMessageStream extends EventEmitter {
     super();
 
     this.messageStreamHandlers = new Map();
-    this.messageStreamHandlers.set(0, new RTMPMessageStreamHandler(this.emit));
+    this.messageStreamHandlers.set(0, new RTMPMessageStreamHandler(this.emit.bind(this)));
 
     this.onMessage = this.onMessage.bind(this);
     this.messageTransport = messageTransport;
@@ -22,7 +22,7 @@ class RTMPMessageStream extends EventEmitter {
   }
 
   onMessage(message) {
-    if (messageStreamHandlers.has(message.streamId)) {
+    if (this.messageStreamHandlers.has(message.streamId)) {
       this.messageStreamHandlers.get(message.streamId).onMessage(message);
     } else {
       // log error invalid stream id

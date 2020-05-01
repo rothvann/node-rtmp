@@ -9,27 +9,43 @@ class RTMPConnection {
       READY: 3,
     };
     this.windowSize = 2500000;
+    this.bandwidth = 2500000;
+    this.bandwidthLimitType = null;
+
     this.bytesReceived = 0;
 
     this.socket = socket;
     this.state = this.connectionState.HANDSHAKE_0;
     this.messageStream = messageStream;
     this.handleData = this.handleData.bind(this);
-    this.changeWindowSize = this.changeWindowSize.bind(this);
     this.data = Buffer.from([]);
 
     this.socket.on('data', this.handleData);
-    this.messageStream.on('windowSize', this.changeWindowSize);
-  }
-
-  changeWindowSize(size) {
-    this.windowSize = size;
+    this.messageStream.on('Window Acknowledgement Size', (size) => { this.windowSize = size; });
+    this.messageStream.on('Set Peer Bandwidth', (bandwidth, limitType) => {
+      switch (limitType) {
+        case 0:
+          this.bandwidth = bandwidth;
+          break;
+        case 1:
+          this.bandwidth = min(this.bandwidth, bandwidth);
+          break;
+        case 2:
+          if (this.bandwidthLimitType === 0) {
+            this.bandwidth = bandwidth;
+          }
+          break;
+        default:
+          break;
+      }
+      this.bandwidthLimitType = limitType;
+    });
   }
 
   handleData(data) {
     this.bytesReceived += data.length;
     if (this.bytesReceived > this.windowSize) {
-      const acknowledgement = Buffer.alloc(4);
+      let acknowledgement = Buffer.alloc(4);
       acknowledgement.writeUIntBE(this.bytesReceived);
       acknowledgement = this.messageStream.formatMessage(acknowledgement);
       this.socket.write(acknowledgement);

@@ -4,18 +4,18 @@
 class RTMPChunkStreamHandler {
   constructor(emit) {
     this.emit = emit;
-    this.prevTimestamp;
-    this.prevTimestampDelta;
-    this.prevLength;
-    this.prevTypeId;
-    this.prevStreamId;
+    this.prevTimestamp = null;
+    this.prevTimestampDelta = null;
+    this.prevLength = null;
+    this.prevTypeId = null;
+    this.prevStreamId = null;
     this.prevHaveExtended = false;
 
     this.parseMessageHeader = this.parseMessageHeader.bind(this);
     this.parseChunk = this.parseChunk.bind(this);
     this.parseProtocolControlMessage = this.parseProtocolControlMessage.bind(this);
 
-    this.max_chunk_size = 128;
+    this.maxChunkSize = 128;
     this.partialMessage = null;
   }
 
@@ -25,7 +25,7 @@ class RTMPChunkStreamHandler {
     // First two bits
     const fmt = basicHeader >> 6;
     // Last 6 bits
-    let cs_id = basicHeader & 0x3F;
+    let chunkStreamId = basicHeader & 0x3F;
     let size = 1;
     if (chunkStreamId === 0) {
       size = 2;
@@ -41,19 +41,19 @@ class RTMPChunkStreamHandler {
     return {
       size,
       fmt,
-      chunkStreamId: chunkStreamId,
+      chunkStreamId,
     };
   }
 
   parseMessageHeader(fmt, chunk) {
-    let chunk_data_start = 0;
+    let chunkDataStart = 0;
     switch (fmt) {
       case 0: {
-        chunk_data_start = 11;
+        chunkDataStart = 11;
         let timestamp = chunk.readUIntBE(0, 3);
         // if equals to 0xFFFFFF
         if (timestamp >= 16777215) {
-          chunk_data_start = 15;
+          chunkDataStart = 15;
           // get extended
           timestamp = chunk.readUIntBE(11, 4);
           this.prevHaveExtended = true;
@@ -62,74 +62,74 @@ class RTMPChunkStreamHandler {
         }
 
         const length = chunk.readUIntBE(3, 3);
-        const type_id = chunk.readUIntBE(6, 1);
-        const stream_id = chunk.readUIntLE(7, 4);
+        const typeId = chunk.readUIntBE(6, 1);
+        const streamId = chunk.readUIntLE(7, 4);
 
         this.prevTimestamp = timestamp;
         this.prevTimestampDelta = 0;
         this.prevLength = length;
-        this.prevTypeId = type_id;
-        this.prevStreamId = stream_id;
+        this.prevTypeId = typeId;
+        this.prevStreamId = streamId;
         break;
       }
       case 1: {
-        chunk_data_start = 7;
-        let timestamp_delta = chunk.readUIntBE(0, 3);
+        chunkDataStart = 7;
+        let timestampDelta = chunk.readUIntBE(0, 3);
 
-        if (timestamp_delta >= 16777215) {
-          chunk_data_start = 11;
-          timestamp_delta = chunk.readUIntBE(7, 4);
+        if (timestampDelta >= 16777215) {
+          chunkDataStart = 11;
+          timestampDelta = chunk.readUIntBE(7, 4);
           this.prevHaveExtended = true;
         } else {
           this.prevHaveExtended = false;
         }
 
         const length = chunk.readUIntBE(3, 3);
-        const type_id = chunk.readUIntBE(6, 1);
+        const typeId = chunk.readUIntBE(6, 1);
 
-        this.prevTimestampDelta = timestamp_delta;
+        this.prevTimestampDelta = timestampDelta;
         this.prevLength = length;
-        this.prevTypeId = type_id;
+        this.prevTypeId = typeId;
         break;
       }
       case 2: {
-        chunk_data_start = 3;
-        let timestamp_delta = chunk.readUIntBE(0, 3);
+        chunkDataStart = 3;
+        let timestampDelta = chunk.readUIntBE(0, 3);
 
-        if (timestamp_delta >= 16777215) {
-          chunk_data_start = 7;
-          timestamp_delta = chunk.readUIntBE(3, 4);
+        if (timestampDelta >= 16777215) {
+          chunkDataStart = 7;
+          timestampDelta = chunk.readUIntBE(3, 4);
           this.prevHaveExtended = true;
         } else {
           this.prevHaveExtended = false;
         }
 
-        this.prevTimestampDelta = timestamp_delta;
+        this.prevTimestampDelta = timestampDelta;
         break;
       }
       case 3: {
-        chunk_data_start = 0;
+        chunkDataStart = 0;
         if (this.prevHaveExtended) {
-          chunk_data_start = 4;
-          const timestamp_delta = chunk.readUIntBE(0, 4);
-          this.prevTimestampDelta = timestamp_delta;
+          chunkDataStart = 4;
+          const timestampDelta = chunk.readUIntBE(0, 4);
+          this.prevTimestampDelta = timestampDelta;
         }
         break;
       }
     }
 
-    const length = min(this.prevLength, max_chunk_size);
+    const length = min(this.prevLength, this.maxChunkSize);
 
-    const chunk_data = chunk.slice(chunk_data_start, chunk_data_start + length);
+    const chunkData = chunk.slice(chunkDataStart, chunkDataStart + length);
 
     return {
       timestamp: this.prevTimestamp,
-      timestamp_delta: this.prevTimestampDelta,
-      size: length + chunk_data_start,
-      type_id: this.prevTypeId,
-      stream_id: this.prevStreamId,
-      message_length: this.prevLength,
-      chunk_data,
+      timestampDelta: this.prevTimestampDelta,
+      size: length + chunkDataStart,
+      typeId: this.prevTypeId,
+      streamId: this.prevStreamId,
+      messageLength: this.prevLength,
+      chunkData,
     };
   }
 
@@ -138,39 +138,38 @@ class RTMPChunkStreamHandler {
 
     // Assume typeid 3 if there is a partial message
     if (partialMessage) {
-      this.partialMessage = Buffer.concat([this.partialMessage.chunk_data, message.chunk_data]);
-      if (this.partialMessage.chunk_data.length >= message.message_length) {
+      this.partialMessage = Buffer.concat([this.partialMessage.chunkData, message.chunkData]);
+      if (this.partialMessage.chunkData.length >= message.messageLength) {
         // emit message
-        message.chunk_data = this.partialMessage;
+        message.chunkData = this.partialMessage;
         this.emit(message);
         this.partialMessage = null;
-        this.partialMessage_length = 0;
       }
-    } else {
+    } else if (this.maxChunkSize < message.chunkData.messageLength) {
       // if message not received in full
-      if (this.max_chunk_size < message.chunk_data.message_length) {
-        this.partialMessage = message;
-      } else {
-        // emit full message
-        this.emit(message);
-      }
-    }
-    if (basicHeader.chunkStreamId == 2 && message.stream_id == 0) {
-
+      this.partialMessage = message;
+    } else if (message.typeId <= 2 && basicHeader.chunkStreamId === 2 && message.streamId === 0) {
+      this.parseProtocolControlMessage(message);
+    } else {
+      // emit full message
+      this.emit(message);
     }
   }
 
   parseProtocolControlMessage(message) {
-
-    // protocol control message
-    /*
-        1. Set Chunk Size
-        2. Discard chunk stream ids  (4 bits)
-        3. Acknowledgement
-        5. Window Acknowledgement Size
-        6. Set Peer Bandwidth
-        */
-
+    switch (message.typeId) {
+      case 1: {
+        // chunks can't be larger than messages and messages can't be larger than 2^24 bytes
+        const size = message.chunkData.readIntBE(0, 4);
+        this.maxChunkSize = min(size, 0xFFFFFF);
+        break;
+      }
+      case 2:
+        this.partialMessage = null;
+        break;
+      default:
+        break;
+    }
   }
 }
 
