@@ -1,29 +1,39 @@
 const RTMPHandshake = require('./RTMPHandshake');
-const RTMPChunkStream = require('./RTMPChunkStream');
-const RTMPMessageHandler = require('./RTMPMessageHandler');
 
 class RTMPConnection {
-  constructor(socket) {
+  constructor(socket, messageStream) {
     this.connectionState = {
       HANDSHAKE_0: 0,
       HANDSHAKE_1: 1,
       HANDSHAKE_2: 2,
       READY: 3,
     };
-
+    this.windowSize = 2500000;
+    this.bytesReceived = 0;
 
     this.socket = socket;
     this.state = this.connectionState.HANDSHAKE_0;
-    this.messageHandler = new RTMPMessageHandler();
-    this.chunkStream = new RTMPChunkStream(this.messageHandler);
+    this.messageStream = messageStream;
     this.handleData = this.handleData.bind(this);
+    this.changeWindowSize = this.changeWindowSize.bind(this);
     this.data = Buffer.from([]);
 
-    this.socket.setNoDelay(true);
     this.socket.on('data', this.handleData);
+    this.messageStream.on('windowSize', this.changeWindowSize);
+  }
+
+  changeWindowSize(size) {
+    this.windowSize = size;
   }
 
   handleData(data) {
+    this.bytesReceived += data.length;
+    if (this.bytesReceived > this.windowSize) {
+      const acknowledgement = Buffer.alloc(4);
+      acknowledgement.writeUIntBE(this.bytesReceived);
+      this.socket.write(acknowledgement);
+      this.bytesReceived = 0;
+    }
     this.data = Buffer.concat([this.data, data]);
     while (this.data.length > 0) {
       switch (this.state) {
@@ -52,8 +62,11 @@ class RTMPConnection {
           this.state = this.connectionState.READY;
           break;
         case this.connectionState.READY:
-          this.chunkStream.receive(data);
+          this.messageStream.receive(data);
           this.data = Buffer.from([]);
+          break;
+        default:
+          throw Error('Unknown RTMPConnection state');
       }
     }
   }

@@ -11,7 +11,7 @@ class BufferStream {
 
   read(length) {
     this.offset += length;
-    return buf.slice(this.offset - length, this.offset);
+    return this.buf.slice(this.offset - length, this.offset);
   }
 
   setOffset(offset) {
@@ -20,7 +20,7 @@ class BufferStream {
 
   invRead(length) {
     this.offset -= length;
-    return buf.slice(this.offset, this.offset + length);
+    return this.buf.slice(this.offset, this.offset + length);
   }
 }
 

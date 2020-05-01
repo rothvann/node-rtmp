@@ -1,20 +1,19 @@
+const EventEmitter = require('events');
 const RTMPChunkStreamHandler = require('./RTMPChunkStreamHandler');
 
 // Receives and sends chunks to the right chunk stream handler
 
-class RTMPChunkStream {
-  constructor(messageHandler) {
+class RTMPChunkStream extends EventEmitter {
+  constructor() {
+    super();
     this.chunk_streams = new Map();
-    this.messageHandler = messageHandler;
   }
 
-  registerNewChunkStreamHandler(chunkStreamId) {
-    this.chunkStreams.set(chunkStreamId, new RTMPChunkStreamHandler());
-    this.chunkStreams.get(chunkStreamId).on('message', this.messageHandler.receive);
-  }
-
-  receive(data) {
-    const basicHeader = RTMPChunkStreamHandler.parseBasicHeader(chunk);
+  onData(data) {
+    const basicHeader = RTMPChunkStreamHandler.parseBasicHeader(data);
+    if (!this.chunk_streams.has(basicHeader.chunkStreamId)) {
+      this.chunk_streams.set(basicHeader.chunkStreamId, new RTMPChunkStreamHandler(this.emit));
+    }
     this.chunkStreams.get(basicHeader.chunkStreamId).parseChunk(basicHeader, data);
   }
 }

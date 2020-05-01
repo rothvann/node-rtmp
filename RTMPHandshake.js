@@ -14,9 +14,11 @@ const S1_TIMESTAMP = Buffer.from([0, 0, 0, 0]);
 
 const S1 = Buffer.concat([S1_TIMESTAMP, ZERO_4_BYTES, S1_RANDOM_BYTES]);
 
+/*
 function validateC2() {
 
 }
+*/
 
 function generateTimestamp() {
   const timestamp = Buffer.alloc(4);
@@ -27,7 +29,7 @@ function generateTimestamp() {
 }
 
 // In case rtmp verions > 3 are implemented
-function generateS0(C0) {
+function generateS0() {
   return S0;
 }
 

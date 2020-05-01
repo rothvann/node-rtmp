@@ -19,8 +19,6 @@ describe('Connect', () => {
 
     const client = new net.Socket();
 
-    client.setNoDelay(true);
-
     client.connect(1935, '127.0.0.1');
 
     client.on('data', (data) => {

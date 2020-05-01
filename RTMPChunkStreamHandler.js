@@ -1,11 +1,9 @@
-const EventEmitter = require('events');
 
 // Collects chunks from each stream and emits a message to the event handler
 
-class RTMPChunkStreamHandler extends EventEmitter {
-  constructor() {
-    super();
-
+class RTMPChunkStreamHandler {
+  constructor(emit) {
+    this.emit = emit;
     this.prev_timestamp;
     this.prev_timestamp_delta;
     this.prev_length;
@@ -122,15 +120,17 @@ class RTMPChunkStreamHandler extends EventEmitter {
       }
     }
 
-    const chunk_data = chunk.slice(chunk_data_start, chunk_data_start + this.prev_length);
+    const length = min(this.prev_length, max_chunk_size);
+
+    const chunk_data = chunk.slice(chunk_data_start, chunk_data_start + length);
 
     return {
       timestamp: this.prev_timestamp,
       timestamp_delta: this.prev_timestamp_delta,
-      size: this.prev_length + chunk_data_start,
+      size: length + chunk_data_start,
       type_id: this.prev_type_id,
       stream_id: this.prev_stream_id,
-      chunk_length: this.prev_length,
+      message_length: this.prev_length,
       chunk_data,
     };
   }
@@ -140,9 +140,8 @@ class RTMPChunkStreamHandler extends EventEmitter {
 
     // Assume typeid 3 if there is a partial message
     if (partialMessage) {
-      this.partialMessage = Buffer.concat([this.partialMessage, message.chunk_data]);
-      this.partial_message_length += message.chunk_data.length;
-      if (this.partial_message_length >= message.size) {
+      this.partialMessage = Buffer.concat([this.partialMessage.chunk_data, message.chunk_data]);
+      if (this.partialMessage.chunk_data.length >= message.message_length) {
         // emit message
         message.chunk_data = this.partialMessage;
         this.emit(message);
@@ -151,9 +150,8 @@ class RTMPChunkStreamHandler extends EventEmitter {
       }
     } else {
       // if message not received in full
-      if (message.size <= message.chunk_data.length) {
-        this.partialMessage = message.chunk_data;
-        this.partial_message_length += message.chunk_data.length;
+      if (this.max_chunk_size < message.chunk_data.message_length) {
+        this.partialMessage = message;
       } else {
         // emit full message
         this.emit(message);
