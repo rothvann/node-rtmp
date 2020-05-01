@@ -1,19 +1,23 @@
 const EventEmitter = require('events');
 
 class RTMPMessageStream extends EventEmitter {
-  constructor(messageEmitter) {
+  constructor(messageTransport) {
     super();
 
     this.messageStreamHandlers = new Map();
     this.messageStreamHandlers.set(0, new MessageStreamHandler(this.emit));
 
     this.onMessage = this.onMessage.bind(this);
-    this.messageEmitter = messageEmitter;
-    this.messageEmitter.on('message', this.onMessage);
+    this.messageTransport = messageTransport;
+    this.messageTransport.on('message', this.onMessage);
+  }
+
+  formatMessage(message) {
+    return this.messageTransport.formatMessage(message);
   }
 
   onData(data) {
-    this.messageEmitter.onData(data);
+    this.messageTransport.onData(data);
   }
 
   onMessage(message) {

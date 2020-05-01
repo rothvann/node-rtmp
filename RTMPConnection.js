@@ -31,8 +31,11 @@ class RTMPConnection {
     if (this.bytesReceived > this.windowSize) {
       const acknowledgement = Buffer.alloc(4);
       acknowledgement.writeUIntBE(this.bytesReceived);
+      acknowledgement = this.messageStream.formatMessage(acknowledgement);
       this.socket.write(acknowledgement);
       this.bytesReceived = 0;
+
+      // message format need to convert to chunk stream format
     }
     this.data = Buffer.concat([this.data, data]);
     while (this.data.length > 0) {
