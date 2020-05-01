@@ -3,16 +3,18 @@ const RTMPChunkStreamHandler = require('./RTMPChunkStreamHandler');
 // Receives and sends chunks to the right chunk stream handler
 
 class RTMPChunkStream {
-  constructor(event_handler) {
+  constructor(messageHandler) {
     this.chunk_streams = new Map();
-    this.event_handler = event_handler;
+    this.messageHandler = messageHandler;
   }
 
-  registerNewChunkStreamHandler(cs_id) {
-  
+  registerNewChunkStreamHandler(chunkStreamId) {
+    this.chunkStreams.set(chunkStreamId, new RTMPChunkStreamHandler());
+    this.chunkStreams.get(chunkStreamId).on('message', this.messageHandler.receive);    
   }
 
-  recv(packet) {
-
+  receive(data) {
+    let basicHeader = RTMPChunkStreamHandler.parseBasicHeader(chunk);
+    this.chunkStreams.get(basicHeader['chunkStreamId']).parseChunk(basicHeader, data);
   }
 }

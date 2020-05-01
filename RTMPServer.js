@@ -8,10 +8,10 @@ class RTMPServer {
         this.tcpServer = new net.Server();
                 
         this.port = 1935;
-        this.rtmp_connections = []
+        this.rtmpConnections = []
         
         server.listen(this.port, socket => {
-            this.rtmp_connections.push(new RtmpConnection(socket));            
+            this.rtmpConnections.push(new rtmpConnection(socket));
         });
     }
 }

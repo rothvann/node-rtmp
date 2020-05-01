@@ -48,7 +48,7 @@ class RTMPChunkStreamHandler extends EventEmitter {
         return {
             headerLength: headerLength,
             fmt: fmt,
-            cs_id: cs_id
+            chunkStreamId: cs_id
         };
     }
     
@@ -161,7 +161,7 @@ class RTMPChunkStreamHandler extends EventEmitter {
         if(basic_header['cs_id'] == 2 && message['stream_id'] == 0) {
             
         }
-}
+    }
     
     parseProtocolControlMessage(message) {
         
