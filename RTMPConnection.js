@@ -47,7 +47,8 @@ class RTMPConnection {
 
   write(message) {
     // make sure not to send messages past bandwidth limit
-    this.writeBuffer = Buffer.concat([this.writeBuffer, message]);
+    const data = this.messageStream.formatMessage(message);
+    this.writeBuffer = Buffer.concat([this.writeBuffer, data]);
     this.attemptWrite();
   }
 
