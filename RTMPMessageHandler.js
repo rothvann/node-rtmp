@@ -1,13 +1,13 @@
 
 class RTMPMessageHandler {
-    
-    constructor() {
-        
-    }
-    
-    receive(message) {
-        
-        
-    }
+  constructor() {
 
+  }
+
+  receive(message) {
+
+
+  }
 }
+
+module.exports = RTMPMessageHandler;

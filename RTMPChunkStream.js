@@ -10,11 +10,13 @@ class RTMPChunkStream {
 
   registerNewChunkStreamHandler(chunkStreamId) {
     this.chunkStreams.set(chunkStreamId, new RTMPChunkStreamHandler());
-    this.chunkStreams.get(chunkStreamId).on('message', this.messageHandler.receive);    
+    this.chunkStreams.get(chunkStreamId).on('message', this.messageHandler.receive);
   }
 
   receive(data) {
-    let basicHeader = RTMPChunkStreamHandler.parseBasicHeader(chunk);
-    this.chunkStreams.get(basicHeader['chunkStreamId']).parseChunk(basicHeader, data);
+    const basicHeader = RTMPChunkStreamHandler.parseBasicHeader(chunk);
+    this.chunkStreams.get(basicHeader.chunkStreamId).parseChunk(basicHeader, data);
   }
 }
+
+module.exports = RTMPChunkStream;
