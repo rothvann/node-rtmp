@@ -13,14 +13,17 @@ class RTMPConnection {
     this.bandwidthLimitType = null;
 
     this.bytesReceived = 0;
+    this.unacknowledgedBytes = 0;
 
     this.socket = socket;
     this.state = this.connectionState.HANDSHAKE_0;
     this.messageStream = messageStream;
     this.handleData = this.handleData.bind(this);
     this.data = Buffer.from([]);
+    this.writeBuffer = Buffer.from([]);
 
     this.socket.on('data', this.handleData);
+    this.messageStream.on('Acknowledgement', (size) => { this.unacknowledgedBytes -= size; this.attemptWrite(); });
     this.messageStream.on('Window Acknowledgement Size', (size) => { this.windowSize = size; });
     this.messageStream.on('Set Peer Bandwidth', (bandwidth, limitType) => {
       switch (limitType) {
@@ -42,9 +45,24 @@ class RTMPConnection {
     });
   }
 
+  write(message) {
+    // make sure not to send messages past bandwidth limit
+    this.writeBuffer = Buffer.concat([this.writeBuffer, message]);
+    this.attemptWrite();
+  }
+
+  attemptWrite() {
+    const maxSize = this.bandwidth - this.unacknowledgedBytes;
+    if (maxSize > 0) {
+      const toSend = this.writeBuffer.slice(0, maxSize);
+      this.writeBuffer = this.writeBuffer.slice(maxSize);
+      this.socket.write(toSend);
+    }
+  }
+
   handleData(data) {
     this.bytesReceived += data.length;
-    if (this.bytesReceived > this.windowSize) {
+    if (this.bytesReceived > this.windowSize / 2) {
       let acknowledgement = Buffer.alloc(4);
       acknowledgement.writeUIntBE(this.bytesReceived);
       acknowledgement = this.messageStream.formatMessage(acknowledgement);

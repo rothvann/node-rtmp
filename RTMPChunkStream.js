@@ -6,7 +6,7 @@ const RTMPChunkStreamHandler = require('./RTMPChunkStreamHandler');
 class RTMPChunkStream extends EventEmitter {
   constructor() {
     super();
-    this.chunk_streams = new Map();
+    this.chunkStreams = new Map();
   }
 
   formatMessage(message) {
@@ -15,9 +15,9 @@ class RTMPChunkStream extends EventEmitter {
 
   onData(data) {
     const basicHeader = RTMPChunkStreamHandler.parseBasicHeader(data);
-    if (!this.chunk_streams.has(basicHeader.chunkStreamId)) {
+    if (!this.chunkStreams.has(basicHeader.chunkStreamId)) {
       const handler = new RTMPChunkStreamHandler(this.emit.bind(this));
-      this.chunk_streams.set(basicHeader.chunkStreamId, handler);
+      this.chunkStreams.set(basicHeader.chunkStreamId, handler);
     }
     this.chunkStreams.get(basicHeader.chunkStreamId).parseChunk(basicHeader, data);
   }

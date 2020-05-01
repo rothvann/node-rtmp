@@ -6,11 +6,14 @@ class RTMPMessageStream extends EventEmitter {
     super();
 
     this.messageStreamHandlers = new Map();
-    this.messageStreamHandlers.set(0, new RTMPMessageStreamHandler(this.emit.bind(this)));
+    this.controlStream = new RTMPMessageStreamHandler(this.emit.bind(this));
+    this.messageStreamHandlers.set(0, this.controlStream);
 
     this.onMessage = this.onMessage.bind(this);
     this.messageTransport = messageTransport;
     this.messageTransport.on('message', this.onMessage);
+    
+    this.controlStream.on('createStream', 
   }
 
   formatMessage(message) {
