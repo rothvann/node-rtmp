@@ -1,5 +1,6 @@
 const EventEmitter = require('events');
 const RTMPChunkStreamHandler = require('./RTMPChunkStreamHandler');
+const RTMPChunkStreamEncoder = require('./RTMPChunkStreamEncoder');
 
 // Receives and sends chunks to the right chunk stream handler
 
@@ -7,10 +8,11 @@ class RTMPChunkStream extends EventEmitter {
   constructor() {
     super();
     this.chunkStreams = new Map();
+    this.chunkEncoder = new RTMPChunkStreamEncoder();
   }
 
-  formatMessage(message) {
-
+  encodeMessage(message) {
+    this.chunkEncoder.encode(message);
   }
 
   onData(data) {

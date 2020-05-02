@@ -47,7 +47,7 @@ class RTMPConnection {
 
   write(message) {
     // make sure not to send messages past bandwidth limit
-    const data = this.messageStream.formatMessage(message);
+    const data = this.messageStream.encodeMessage(message);
     this.writeBuffer = Buffer.concat([this.writeBuffer, data]);
     this.attemptWrite();
   }
@@ -66,7 +66,7 @@ class RTMPConnection {
     if (this.bytesReceived > this.windowSize / 2) {
       let acknowledgement = Buffer.alloc(4);
       acknowledgement.writeUIntBE(this.bytesReceived);
-      acknowledgement = this.messageStream.formatMessage(acknowledgement);
+      acknowledgement = this.messageStream.encodeMessage(acknowledgement);
       this.socket.write(acknowledgement);
       this.bytesReceived = 0;
 
