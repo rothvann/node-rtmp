@@ -8,11 +8,11 @@ class RTMPChunkStream extends EventEmitter {
   constructor() {
     super();
     this.chunkStreams = new Map();
-    this.chunkEncoder = new RTMPChunkStreamEncoder();
+    // this.chunkEncoder = new RTMPChunkStreamEncoder();
   }
 
   encodeMessage(message) {
-    this.chunkEncoder.encode(message);
+    // this.chunkEncoder.encode(message);
   }
 
   onData(data) {

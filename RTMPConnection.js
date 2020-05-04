@@ -43,6 +43,7 @@ class RTMPConnection {
       }
       this.bandwidthLimitType = limitType;
     });
+    this.messageStream.on('write', (data) => { this.write(data); });
   }
 
   write(message) {

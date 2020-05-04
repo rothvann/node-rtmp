@@ -1,3 +1,4 @@
+const amf2json = require('amf2json');
 
 class RTMPMessageStreamHandler {
   constructor(emit) {
@@ -28,9 +29,11 @@ class RTMPMessageStreamHandler {
     };
 
     this.emit = emit;
+    this.amfDecoder = new amf2json();
   }
 
   onMessage(message) {
+    message.reply = (data) => { this.emit('write', data); };
     switch (message.typeId) {
       case this.messageTypes.ACKNOWLEDGEMENT: {
         const size = message.chunkData.readUIntBE(0, 4);
@@ -89,27 +92,31 @@ class RTMPMessageStreamHandler {
       case this.messageTypes.SET_PEER_BANDWIDTH: {
         const bandwidth = message.chunkData.readUIntBE(0, 4);
         const limitType = message.chunkData.readUIntBE(4, 1);
-        this.emit('SET PEER BANDWIDTH', bandwidth, limitType);
+        this.emit('Set Peer Bandwidth', bandwidth, limitType);
         break;
       }
       case this.messageTypes.AUDIO:
-        this.emit('AUDIO', message.chunkData);
+        this.emit('Audio', message.chunkData);
       case this.messageTypes.VIDEO:
-        this.emit('VIDEO', message.chunkData);
+        this.emit('Video', message.chunkData);
       case this.messageTypes.DATA_MESSAGE_AMF3:
-
+      // prepend 0x11 if not there
+      case this.messageTypes.DATA_MESSAGE_AMF0: {
+        const amfMessage = this.amfDecoder(message.chunkData);
+        this.emit('Data Message', amfMessage);
+        break;
+      }
       case this.messageTypes.SHARED_OBJECT_MESSAGE_AMF3:
       // Does not support shared objects
-        break;
-      case this.messageTypes.COMMAND_MESSAGE_AMF3:
-
-      case this.messageTypes.DATA_MESSAGE_AMF0:
-
       case this.messageTypes.SHARED_OBJECT_MESSAGE_AMF0:
       // No support >:(
         break;
+      case this.messageTypes.COMMAND_MESSAGE_AMF3:
+      // prepend 0x11 if not there
       case this.messageTypes.COMMAND_MESSAGE_AMF0:
-
+        const amfMessage = this.amfDecoder(message.chunkData);
+        this.emit('Command Message', amfMessage);
+        break;
       case this.messageTypes.AGGREGATE:
       // not yet either >:(
     }
