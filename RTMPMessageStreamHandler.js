@@ -33,7 +33,6 @@ class RTMPMessageStreamHandler {
   }
 
   onMessage(message) {
-    message.reply = (data) => { this.emit('write', data); };
     switch (message.typeId) {
       case this.messageTypes.ACKNOWLEDGEMENT: {
         const size = message.chunkData.readUIntBE(0, 4);

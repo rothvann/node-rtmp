@@ -43,10 +43,13 @@ class RTMPConnection {
       }
       this.bandwidthLimitType = limitType;
     });
-    this.messageStream.on('write', (data) => { this.write(data); });
   }
 
-  write(message) {
+  registerHandler(event, handler) {
+    this.messageStream.on(event, handler);
+  }
+
+  writeMessage(message) {
     // make sure not to send messages past bandwidth limit
     const data = this.messageStream.encodeMessage(message);
     this.writeBuffer = Buffer.concat([this.writeBuffer, data]);
