@@ -37,7 +37,7 @@ class RTMPMessageStreamHandler {
     switch (message.typeId) {
       case this.messageTypes.ACKNOWLEDGEMENT: {
         const size = message.chunkData.readUIntBE(0, 4);
-        this.emit('ACKNOWLEDGEMENT', size);
+        this.emit('Acknowledgement', size);
         break;
       }
       case this.messageTypes.USER_CONTROL_MESSAGE: {
