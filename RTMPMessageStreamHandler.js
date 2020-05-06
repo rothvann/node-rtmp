@@ -102,7 +102,6 @@ class RTMPMessageStreamHandler {
       case this.messageTypes.DATA_MESSAGE_AMF3:
       // prepend 0x11 if not there
       case this.messageTypes.DATA_MESSAGE_AMF0: {
-        console.log(message.chunkData);
         const amfMessage = amfDecoder.decode(message.chunkData);
         this.emit('Data Message', amfMessage);
         break;

@@ -18,7 +18,8 @@ function generateSetChunkSize(size) {
   return generateMessage(1, 0, chunkSize);
 }
 
-function generateAcknowlegement(size) {
+// Acknowledgment is mispelled but the spelling is from the RTMP 1.0 Specification
+function generateAcknowledgement(size) {
   const sequenceNumber = Buffer.alloc(4);
   sequenceNumber.writeUIntBE(size, 0, 4);
   return generateMessage(3, 0, sequenceNumber);
@@ -46,5 +47,5 @@ function generateSetPeerBandwidth(size, limitType) {
 
 
 module.exports = {
-  generateMessage, generateSetChunkSize, generateAcknowlegement, generateUserControlMessage, generateWindowAcknowledgementSize, generateSetPeerBandwidth,
+  generateMessage, generateSetChunkSize, generateAcknowledgement, generateUserControlMessage, generateWindowAcknowledgementSize, generateSetPeerBandwidth,
 };

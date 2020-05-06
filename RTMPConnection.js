@@ -1,4 +1,5 @@
 const RTMPHandshake = require('./RTMPHandshake');
+const RTMPMessages = require('./RTMPMessages');
 
 class RTMPConnection {
   constructor(socket, messageStream) {
@@ -52,7 +53,6 @@ class RTMPConnection {
   writeMessage(message) {
     // make sure not to send messages past bandwidth limit
     const data = this.messageStream.encodeMessage(message);
-    console.log(data);
     this.writeBuffer = Buffer.concat([this.writeBuffer, data]);
     this.attemptWrite();
   }
@@ -71,13 +71,9 @@ class RTMPConnection {
   handleData(data) {
     this.bytesReceived += data.length;
     if (this.bytesReceived > this.windowSize / 2) {
-      let acknowledgement = Buffer.alloc(4);
-      acknowledgement.writeUIntBE(this.bytesReceived);
-      acknowledgement = this.messageStream.encodeMessage(acknowledgement);
-      this.socket.write(acknowledgement);
+      const acknowledgement = RTMPMessages.generateAcknowledgement(this.bytesReceived);
+      this.writeMessage(acknowledgement);
       this.bytesReceived = 0;
-
-      // message format need to convert to chunk stream format
     }
     this.data = Buffer.concat([this.data, data]);
     while (this.data.length > 0) {
