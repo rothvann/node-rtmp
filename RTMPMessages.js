@@ -38,5 +38,5 @@ function generateSetPeerBandwidth(size, limitType) {
 
 
 module.exports = {
-  generateMessage, generateSetChunkSize, generateAcknowlege, generateWindowAcknowledgementSize, generateSetPeerBandwidth,
+  generateMessage, generateSetChunkSize, generateAcknowlegement, generateWindowAcknowledgementSize, generateSetPeerBandwidth,
 };

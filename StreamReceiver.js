@@ -1,6 +1,6 @@
 const amfEncoder = require('amf2json');
 
-const RTMPMessages = require('RTMPMessages');
+const RTMPMessages = require('./RTMPMessages');
 
 
 class StreamReceiver {

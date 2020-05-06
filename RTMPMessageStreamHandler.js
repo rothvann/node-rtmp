@@ -1,4 +1,4 @@
-const amf2json = require('amf2json');
+const amfDecoder = require('amf2json');
 
 class RTMPMessageStreamHandler {
   constructor(emit) {
@@ -29,7 +29,6 @@ class RTMPMessageStreamHandler {
     };
 
     this.emit = emit;
-    this.amfDecoder = new amf2json();
   }
 
   onMessage(message) {
@@ -101,7 +100,7 @@ class RTMPMessageStreamHandler {
       case this.messageTypes.DATA_MESSAGE_AMF3:
       // prepend 0x11 if not there
       case this.messageTypes.DATA_MESSAGE_AMF0: {
-        const amfMessage = this.amfDecoder(message.chunkData);
+        const amfMessage = amfDecoder(message.chunkData);
         this.emit('Data Message', amfMessage);
         break;
       }
@@ -113,7 +112,7 @@ class RTMPMessageStreamHandler {
       case this.messageTypes.COMMAND_MESSAGE_AMF3:
       // prepend 0x11 if not there
       case this.messageTypes.COMMAND_MESSAGE_AMF0:
-        const amfMessage = this.amfDecoder(message.chunkData);
+        const amfMessage = amfDecoder(message.chunkData);
         this.emit('Command Message', amfMessage);
         break;
       case this.messageTypes.AGGREGATE:
