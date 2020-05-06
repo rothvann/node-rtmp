@@ -15,6 +15,18 @@ class ChunkStreamEncoder {
       15: 4,
       18: 4,
     };
+    this.streamStates = new Map();
+    this.newStreamState = {
+      prevTimestamp: null,
+      prevTimestampDelta: null,
+      prevLength: null,
+      prevTypeId: null,
+      prevStreamId: null,
+      prevHaveExtended: false,
+    };
+
+
+    this.maxChunkSize = 128;
   }
 
   encode(message) {
@@ -41,5 +53,19 @@ class ChunkStreamEncoder {
           break;
       }
     }
+    // generate list of chunks
+    const chunks = [];
+    if (message.length > this.maxChunkSize) {
+      // get state if exists
+      if (this.streamStates.has(id)) {
+
+      } else {
+        // format 0
+      }
+    }
+  }
+
+  setMaxChunkSize(size) {
+    this.maxChunkSize = 128;
   }
 }

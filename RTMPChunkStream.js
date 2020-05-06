@@ -6,10 +6,10 @@ const RTMPChunkStreamEncoder = require('./RTMPChunkStreamEncoder');
 class RTMPChunkStream extends EventEmitter {
   constructor() {
     super();
-    this.chunkStreamStates = new Map();
+    this.streamStates = new Map();
     this.messageStates = new Map();
-    // this.chunkEncoder = new RTMPChunkStreamEncoder();
-    this.newChunkState = {
+    this.chunkEncoder = new RTMPChunkStreamEncoder();
+    this.newStreamState = {
       prevTimestamp: null,
       prevTimestampDelta: null,
       prevLength: null,
@@ -19,7 +19,7 @@ class RTMPChunkStream extends EventEmitter {
       partialMessage: null,
     };
 
-    this.chunkStreamStates.set(2, this.newChunkState);
+    this.streamStates.set(2, this.newStreamState);
 
     this.maxChunkSize = 128;
   }
@@ -29,15 +29,15 @@ class RTMPChunkStream extends EventEmitter {
   }
 
   onData(data) {
-    const basicHeader = RTMPChunkStreamHandler.parseBasicHeader(data);
-    if (!this.chunkStreamStates.has(basicHeader.chunkStreamId)) {
-      this.chunkStreamStates.set(basicHeader.chunkStreamId, this.newChunkState);
+    const basicHeader = RTMPChunkStream.parseBasicHeader(data);
+    if (!this.streamStates.has(basicHeader.chunkStreamId)) {
+      this.streamStates.set(basicHeader.chunkStreamId, this.newStreamState);
     }
     this.parseChunk(basicHeader, data);
   }
 
 
-  parseBasicHeader(chunk) {
+  static parseBasicHeader(chunk) {
     const basicHeader = chunk.read(1).readUIntBE(0, 1);
     // First two bits
     const fmt = basicHeader >> 6;
@@ -63,7 +63,7 @@ class RTMPChunkStream extends EventEmitter {
   }
 
   updateChunkState(fmt, chunk) {
-    const currentState = this.chunkStreamStates.get(fmt.chunkStreamId);
+    const currentState = this.streamStates.get(fmt.chunkStreamId);
     let chunkDataStart = 0;
     switch (fmt) {
       case 0: {
@@ -173,10 +173,11 @@ class RTMPChunkStream extends EventEmitter {
         // chunks can't be larger than messages and messages can't be larger than 2^24 bytes
         const size = message.chunkData.readIntBE(0, 4);
         this.maxChunkSize = min(size, 0xFFFFFF);
+        this.chunkEncoder.setMaxChunkSize(this.maxChunkSize);
         break;
       }
       case 2:
-        this.chunkStreamStates.get(message.chunkStreamId).partialMessage = null;
+        this.streamStates.get(message.chunkStreamId).partialMessage = null;
         break;
       default:
         break;
