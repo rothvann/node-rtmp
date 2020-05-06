@@ -40,7 +40,7 @@ function generateS1() {
 function generateS2(C1) {
   const timestamp = C1.slice(0, 4);
   const receivedTimestamp = generateTimestamp();
-  const randomBytes = C1.slice(8, SIZE - 8);
+  const randomBytes = C1.slice(8, SIZE);
   return Buffer.concat([timestamp, receivedTimestamp, randomBytes]);
 }
 

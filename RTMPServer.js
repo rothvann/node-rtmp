@@ -13,7 +13,6 @@ class RTMPServer extends EventEmitter {
 
     this.port = 1935;
 
-
     this.tcpServer.on('connection', (socket) => {
       const chunkStream = new RTMPChunkStream();
       const messageStream = new RTMPMessageStream(chunkStream);

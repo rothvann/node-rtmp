@@ -1,5 +1,5 @@
 
-class ChunkStreamEncoder {
+class RTMPChunkStreamEncoder {
   constructor() {
     this.typeIdToChunkStreamId = {
       1: 2,
@@ -25,8 +25,23 @@ class ChunkStreamEncoder {
       prevHaveExtended: false,
     };
 
+    this.haveExtendedTimestamp = Buffer.from([0xFF, 0xFF, 0xFF]);
 
     this.maxChunkSize = 128;
+  }
+
+  generateTimestamp() {
+    // Zero fill right shift results in a unsigned 32 bit(4 bytes) integer
+    // Truncates 4 bytes off of 8 byte timestamp
+    const time = Date.now() >>> 0;
+    let length = 3;
+    let timestamp;
+    if (time >= 0xFFFFFF) {
+      length = 4;
+    }
+    timestamp = Buffer.alloc(length);
+    timestamp.writeUIntBE(time, 0, length);
+    return timestamp;
   }
 
   encode(message) {
@@ -53,19 +68,50 @@ class ChunkStreamEncoder {
           break;
       }
     }
-    // generate list of chunks
-    const chunks = [];
-    if (message.length > this.maxChunkSize) {
-      // get state if exists
-      if (this.streamStates.has(id)) {
 
-      } else {
+    const messageLength = Buffer.alloc(3);
+    const typeId = Buffer.alloc(1);
+    const streamId = Buffer.alloc(4);
+
+    let timestamp = this.generateTimestamp();
+    let extendedTimestamp = Buffer.from([]);
+    if (timestamp.length == 4) {
+      extendedTimestamp = timestamp;
+      timestamp = this.haveExtendedTimestamp;
+    }
+
+    messageLength.writeUIntBE(message.length, 0, 3);
+    typeId.writeUIntBE(message.typeId, 0, 1);
+    streamId.writeUIntBE(message.streamId, 0, 4);
+
+    if (message.length < this.maxChunkSize) {
+      // get state if exists
+      const basicHeader = Buffer.alloc(1);
+      let messageHeader;
+      if (this.streamStates.has(id)) {
+        const streamState = this.streamState.get(id);
+        if (streamState.prevStreamId === message.streamId) {
+          if (streamState.prevLength === message.length) {
+            // format 2
+            basicHeader.writeUIntBE(id | 0b10000000, 0, 1);
+            return Buffer.concat([basicHeader, timestamp, extendedTimestamp, message.data]);
+          }
+          // format 1
+          basicHeader.writeUIntBE(id | 0b01000000, 0, 1);
+          return Buffer.concat([basicHeader, timestamp, messageLength, typeId, extendedTimestamp, message.data]);
+        }
         // format 0
+        basicHeader.writeUIntBE(id | 0b00000000, 0, 1);
+        return Buffer.concat([basicHeader, timestamp, messageLength, typeId, streamId, extendedTimestamp, message.data]);
       }
+      basicHeader.writeUIntBE(id | 0b00000000, 0, 1);
+      return Buffer.concat([basicHeader, timestamp, messageLength, typeId, streamId, extendedTimestamp, message.data]);
     }
   }
 
   setMaxChunkSize(size) {
-    this.maxChunkSize = 128;
+    this.maxChunkSize = size;
   }
 }
+
+module.exports = RTMPChunkStreamEncoder;

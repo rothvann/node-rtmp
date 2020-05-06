@@ -1,12 +1,13 @@
 const amfEncoder = require('amf2json');
 
 
-function generateMessage(typeId, streamId, payload) {
+function generateMessage(typeId, streamId, data) {
   return {
     typeId,
-    length: payload.length,
+    length: data.length,
     timestamp: Date.now(),
     streamId,
+    data,
   };
 }
 
@@ -21,6 +22,13 @@ function generateAcknowlegement(size) {
   const sequenceNumber = Buffer.alloc(4);
   sequenceNumber.writeUIntBE(size, 0, 4);
   return generateMessage(3, 0, sequenceNumber);
+}
+
+function generateUserControlMessage(type, data) {
+  const eventType = Buffer.alloc(2);
+  eventType.writeUIntBE(type, 0, 2);
+
+  return generateMessage(4, 0, Buffer.concat([eventType, data]));
 }
 
 function generateWindowAcknowledgementSize(size) {
@@ -38,5 +46,5 @@ function generateSetPeerBandwidth(size, limitType) {
 
 
 module.exports = {
-  generateMessage, generateSetChunkSize, generateAcknowlegement, generateWindowAcknowledgementSize, generateSetPeerBandwidth,
+  generateMessage, generateSetChunkSize, generateAcknowlegement, generateUserControlMessage, generateWindowAcknowledgementSize, generateSetPeerBandwidth,
 };

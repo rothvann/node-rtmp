@@ -52,16 +52,19 @@ class RTMPConnection {
   writeMessage(message) {
     // make sure not to send messages past bandwidth limit
     const data = this.messageStream.encodeMessage(message);
+    console.log(data);
     this.writeBuffer = Buffer.concat([this.writeBuffer, data]);
     this.attemptWrite();
   }
 
   attemptWrite() {
-    const maxSize = this.bandwidth - this.unacknowledgedBytes;
-    if (maxSize > 0) {
-      const toSend = this.writeBuffer.slice(0, maxSize);
-      this.writeBuffer = this.writeBuffer.slice(maxSize);
-      this.socket.write(toSend);
+    if (this.state === this.connectionState.READY) {
+      const maxSize = this.bandwidth - this.unacknowledgedBytes;
+      if (maxSize > 0) {
+        const toSend = this.writeBuffer.slice(0, maxSize);
+        this.writeBuffer = this.writeBuffer.slice(maxSize);
+        this.socket.write(toSend);
+      }
     }
   }
 
@@ -78,12 +81,11 @@ class RTMPConnection {
     }
     this.data = Buffer.concat([this.data, data]);
     while (this.data.length > 0) {
+      this.attemptWrite();
       switch (this.state) {
         case this.connectionState.HANDSHAKE_0:
           // Receive C0
           this.data = this.data.slice(1);
-          this.socket.write(RTMPHandshake.generateS0());
-          this.socket.write(RTMPHandshake.generateS1());
           this.state = this.connectionState.HANDSHAKE_1;
           break;
         case this.connectionState.HANDSHAKE_1:
@@ -91,7 +93,8 @@ class RTMPConnection {
           if (this.data.length < RTMPHandshake.SIZE) {
             return;
           }
-          this.socket.write(RTMPHandshake.generateS2(data));
+          const response = Buffer.concat([RTMPHandshake.generateS0(), RTMPHandshake.generateS1(), RTMPHandshake.generateS2(data)]);
+          this.socket.write(response);
           this.data = this.data.slice(RTMPHandshake.SIZE);
           this.state = this.connectionState.HANDSHAKE_2;
           break;
@@ -104,7 +107,7 @@ class RTMPConnection {
           this.state = this.connectionState.READY;
           break;
         case this.connectionState.READY:
-          this.messageStream.receive(data);
+          this.messageStream.onData(this.data);
           this.data = Buffer.from([]);
           break;
         default:
