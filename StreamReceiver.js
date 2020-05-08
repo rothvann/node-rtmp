@@ -1,7 +1,7 @@
 const amfEncoder = require('amf2json');
 
+const fs = require('fs');
 const RTMPMessages = require('./RTMPMessages');
-
 
 class StreamReceiver {
   constructor(rtmpConnection) {
@@ -15,7 +15,9 @@ class StreamReceiver {
 
     this.rtmpConnection.registerHandler('Command Message', (message) => { this.onCommandMessage(message); });
     this.rtmpConnection.registerHandler('Data Message', (message) => { this.onDataMessage(message); });
-
+    this.rtmpConnection.registerHandler('Video', (data) => { this.onVideo(data); });
+    this.rtmpConnection.registerHandler('Audio', (data) => { this.onAudio(data); });
+    this.video = fs.createWriteStream('test.h264');
     this.currentStreamId = 0;
   }
 
@@ -31,6 +33,15 @@ class StreamReceiver {
     this.rtmpConnection.writeMessage(RTMPMessages.generateSetChunkSize(4096));
   }
 
+  onAudio(data) {
+    // this.video.write(data);
+
+  }
+
+  onVideo(data) {
+    // this.video.write(data);
+  }
+
   onDataMessage(message) {
     // ignore for now
   }
@@ -40,7 +51,6 @@ class StreamReceiver {
     const commandName = message[0];
     switch (commandName) {
       case 'connect': {
-        console.log('connected');
         this.configureStream();
         const CONNECT_SUCCESS = RTMPMessages.generateMessage(20, 0, amfEncoder.encodeAMF0([
           '_result',
@@ -59,8 +69,6 @@ class StreamReceiver {
           },
         ]));
         this.rtmpConnection.writeMessage(CONNECT_SUCCESS);
-
-
         break;
       }
       case 'close':
@@ -120,6 +128,9 @@ class StreamReceiver {
         ]));
         this.rtmpConnection.writeMessage(onStatus);
         break;
+      }
+      case 'FCUnpublish': {
+        this.video.end();
       }
     }
   }

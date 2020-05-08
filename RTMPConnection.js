@@ -58,7 +58,7 @@ class RTMPConnection {
   }
 
   attemptWrite() {
-    if (this.state === this.connectionState.READY) {
+    if (this.state == this.connectionState.READY) {
       const maxSize = this.bandwidth - this.unacknowledgedBytes;
       if (maxSize > 0) {
         const toSend = this.writeBuffer.slice(0, maxSize);
@@ -75,41 +75,43 @@ class RTMPConnection {
       this.writeMessage(acknowledgement);
       this.bytesReceived = 0;
     }
-    this.data = Buffer.concat([this.data, data]);
-    while (this.data.length > 0) {
-      this.attemptWrite();
-      switch (this.state) {
-        case this.connectionState.HANDSHAKE_0:
-          // Receive C0
-          this.data = this.data.slice(1);
-          this.state = this.connectionState.HANDSHAKE_1;
-          break;
-        case this.connectionState.HANDSHAKE_1:
-          // Receive C1
-          if (this.data.length < RTMPHandshake.SIZE) {
+    if (this.state == this.connectionState.READY) {
+      this.messageStream.onData(data);
+    } else {
+      this.data = Buffer.concat([this.data, data]);
+      while (this.data.length > 0) {
+        switch (this.state) {
+          case this.connectionState.HANDSHAKE_0:
+            // Receive C0
+            this.data = this.data.slice(1);
+            this.state = this.connectionState.HANDSHAKE_1;
+            break;
+          case this.connectionState.HANDSHAKE_1:
+            // Receive C1
+            if (this.data.length < RTMPHandshake.SIZE) {
+              return;
+            }
+            const response = Buffer.concat([RTMPHandshake.generateS0(), RTMPHandshake.generateS1(), RTMPHandshake.generateS2(data)]);
+            this.socket.write(response);
+            this.data = this.data.slice(RTMPHandshake.SIZE);
+            this.state = this.connectionState.HANDSHAKE_2;
+            break;
+          case this.connectionState.HANDSHAKE_2:
+            // Receive C2
+            if (this.data.length < RTMPHandshake.SIZE) {
+              return;
+            }
+            this.data = this.data.slice(RTMPHandshake.SIZE);
+            this.state = this.connectionState.READY;
+            this.messageStream.onData(this.data);
+            this.data = Buffer.from([]);
             return;
-          }
-          const response = Buffer.concat([RTMPHandshake.generateS0(), RTMPHandshake.generateS1(), RTMPHandshake.generateS2(data)]);
-          this.socket.write(response);
-          this.data = this.data.slice(RTMPHandshake.SIZE);
-          this.state = this.connectionState.HANDSHAKE_2;
-          break;
-        case this.connectionState.HANDSHAKE_2:
-          // Receive C2
-          if (this.data.length < RTMPHandshake.SIZE) {
-            return;
-          }
-          this.data = this.data.slice(RTMPHandshake.SIZE);
-          this.state = this.connectionState.READY;
-          break;
-        case this.connectionState.READY:
-          this.messageStream.onData(this.data);
-          this.data = Buffer.from([]);
-          break;
-        default:
-          throw Error('Unknown RTMPConnection state');
+          default:
+            throw Error('Unknown RTMPConnection state');
+        }
       }
     }
+    this.attemptWrite();
   }
 }
 

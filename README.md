@@ -15,4 +15,5 @@
 - [ ] Multiplex data from OBS
 - [ ] Formatting / cleanup
 - [ ] Tests
+- [ ] Performance (Preallocate buffers and use as circular queues). Must check flame graphs first. 
 
