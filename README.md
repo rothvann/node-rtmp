@@ -11,7 +11,10 @@
 - [x] Encoding and sending message on chunk stream
 - [x] Handling User Control Messages (id 4)
 - [x] Preallocate buffers
-- [ ] Decode FLV from OBS
+- [x] Convert video data from OBS to flv file
+- [ ] Convert audio data from OBS to flv file
+- [ ] Multiplex audio and video
+- [ ] HLS
 - [ ] Add common responses / messages to RTMPMessages
 - [ ] ChunkStream needs to assume data received is a byte stream / chunks don't always come in packet sizes
 - [ ] Multiplex data from OBS
