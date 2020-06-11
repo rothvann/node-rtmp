@@ -17,7 +17,20 @@ class StreamReceiver {
     this.rtmpConnection.registerHandler('Data Message', (message) => { this.onDataMessage(message); });
     this.rtmpConnection.registerHandler('Video', (data) => { this.onVideo(data); });
     this.rtmpConnection.registerHandler('Audio', (data) => { this.onAudio(data); });
-    this.video = fs.createWriteStream('test.h264');
+    this.video = fs.createWriteStream('test.flv');
+    
+    let flvHeader = Buffer.alloc(9);
+    flvHeader.write('FLV');
+    flvHeader.writeUIntBE(0x01, 3, 1);
+    flvHeader.writeUIntBE(0x01, 4, 1);
+    flvHeader.writeUIntBE(0x09, 5, 4);
+    
+    let tagSize = Buffer.alloc(4);
+    tagSize.writeUIntBE(0, 0, 4);
+    
+    this.video.write(flvHeader);
+    this.video.write(tagSize);
+    
     this.currentStreamId = 0;
   }
 
@@ -33,13 +46,35 @@ class StreamReceiver {
     this.rtmpConnection.writeMessage(RTMPMessages.generateSetChunkSize(4096));
   }
 
-  onAudio(data) {
+  onAudio(message) {
     // this.video.write(data);
-
+    
   }
 
-  onVideo(data) {
-    // this.video.write(data);
+  onVideo(message) {
+    
+    const codecId = message.chunkData[0] & 0x0f;
+    if(codecId === 7) {
+    
+      let tag = Buffer.alloc(11);
+      tag.writeUIntBE(0x09, 0, 1);
+      tag.writeUIntBE(message.chunkData.length, 1, 3);
+      let timestamp = Buffer.alloc(4);
+      timestamp.writeUIntBE(message.timestamp, 0, 4);
+      tag[4] = (message.timestamp >> 16) & 0xff;
+      tag[5] = (message.timestamp >> 8) & 0xff;
+      tag[6] = message.timestamp & 0xff;
+      tag[7] = (message.timestamp >> 24) & 0xff;
+      tag.writeUIntBE(0x00, 8, 3);
+          
+      let tagSize = Buffer.alloc(4);
+      tagSize.writeUIntBE(message.chunkData.length + 11, 0, 4);
+      
+      this.video.write(tag);    
+      this.video.write(message.chunkData);
+      this.video.write(tagSize);
+    
+    }
   }
 
   onDataMessage(message) {

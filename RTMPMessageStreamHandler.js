@@ -94,10 +94,10 @@ class RTMPMessageStreamHandler {
         break;
       }
       case this.messageTypes.AUDIO:
-        this.emit('Audio', message.chunkData);
+        this.emit('Audio', message);
         break;
       case this.messageTypes.VIDEO:
-        this.emit('Video', message.chunkData);
+        this.emit('Video', message);
         break;
       case this.messageTypes.DATA_MESSAGE_AMF3:
       // prepend 0x11 if not there

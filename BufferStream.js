@@ -38,8 +38,8 @@ class BufferStream {
   }
 
   slice(start, end) {
-    const length = Math.min(end - start, this.length);
-    if (length > this.size) {
+    const length = end - start;
+    if (length > this.length) {
       throw Error('Buffer stream can\'t slice more than size of buffer');
     }
     const newBuffer = Buffer.alloc(length);

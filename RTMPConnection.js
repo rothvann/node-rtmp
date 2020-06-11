@@ -93,6 +93,7 @@ class RTMPConnection {
             }
             const response = Buffer.concat([RTMPHandshake.generateS0(), RTMPHandshake.generateS1(), RTMPHandshake.generateS2(data)]);
             this.socket.write(response);
+            this.messageStream.setEpoch(this.data.readUIntBE(0, 4));
             this.data = this.data.slice(RTMPHandshake.SIZE);
             this.state = this.connectionState.HANDSHAKE_2;
             break;
