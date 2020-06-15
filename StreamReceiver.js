@@ -1,6 +1,7 @@
 const amfEncoder = require('amf2json');
 
 const fs = require('fs');
+const { spawn } = require('child_process');
 const RTMPMessages = require('./RTMPMessages');
 
 class StreamReceiver {
@@ -18,20 +19,47 @@ class StreamReceiver {
     this.rtmpConnection.registerHandler('Video', (data) => { this.onVideo(data); });
     this.rtmpConnection.registerHandler('Audio', (data) => { this.onAudio(data); });
     this.video = fs.createWriteStream('test.flv');
+
+    this.configureTranscoder();
     
-    let flvHeader = Buffer.alloc(9);
+    this.configureFLVHeader();
+    
+
+    this.currentStreamId = 0;
+  }
+  
+  configureTranscoder() {
+    //create master playlist
+    
+    //
+    const config = `-i pipe:0 
+    -c:v libx264 -x264opts keyint=120:no-scenecut -s 1920x1080 -r 60 -profile:v main -preset veryfast -c:a aac -sws_flags bilinear -hls_list_size 0 1920.m3u8
+    -c:v libx264 -x264opts keyint=120:no-scenecut -s 1280x720 -r 60 -profile:v main -preset veryfast -c:a aac -sws_flags bilinear -hls_list_size 0 720.m3u8
+    -c:v libx264 -x264opts keyint=120:no-scenecut -s 1280x720 -r 30 -profile:v main -preset veryfast -c:a aac -sws_flags bilinear -hls_list_size 0 720r30.m3u8
+    -c:v libx264 -x264opts keyint=120:no-scenecut -s 852x480 -r 30 -profile:v main -preset veryfast -c:a aac -sws_flags bilinear -hls_list_size 0 480r30.m3u8 
+    `.split(' ').filter(option => option.length > 0  & option != '\n').map(option => option.trim());
+    console.log(config);
+    this.ffmpeg = spawn('ffmpeg.exe', config);
+    this.ffmpeg.stderr.on('data', err => {
+      console.log(err.toString());
+    });
+  }
+
+  configureFLVHeader() {
+    const flvHeader = Buffer.alloc(9);
     flvHeader.write('FLV');
     flvHeader.writeUIntBE(0x01, 3, 1);
     flvHeader.writeUIntBE(0x05, 4, 1);
     flvHeader.writeUIntBE(0x09, 5, 4);
-    
-    let tagSize = Buffer.alloc(4);
+
+    const tagSize = Buffer.alloc(4);
     tagSize.writeUIntBE(0, 0, 4);
-    
+
     this.video.write(flvHeader);
     this.video.write(tagSize);
     
-    this.currentStreamId = 0;
+    this.transcodeToHLS(flvHeader);
+    this.transcodeToHLS(tagSize);
   }
 
   configureStream() {
@@ -45,51 +73,39 @@ class StreamReceiver {
     this.rtmpConnection.writeMessage(streamBegin);
     this.rtmpConnection.writeMessage(RTMPMessages.generateSetChunkSize(4096));
   }
+  
+  transcodeToHLS(data) {
+    this.ffmpeg.stdin.write(data);
+  }
 
-  onAudio(message) {
-    
-    let tag = Buffer.alloc(11);
-    tag.writeUIntBE(0x08, 0, 1);
+  writeTag(tagType, message) {
+    const tag = Buffer.alloc(11);
+    tag.writeUIntBE(tagType, 0, 1);
     tag.writeUIntBE(message.chunkData.length, 1, 3);
-    let timestamp = Buffer.alloc(4);
+    const timestamp = Buffer.alloc(4);
     timestamp.writeUIntBE(message.timestamp, 0, 4);
     tag[4] = (message.timestamp >> 16) & 0xff;
     tag[5] = (message.timestamp >> 8) & 0xff;
     tag[6] = message.timestamp & 0xff;
     tag[7] = (message.timestamp >> 24) & 0xff;
     tag.writeUIntBE(0x00, 8, 3);
-        
-    let tagSize = Buffer.alloc(4);
+
+    const tagSize = Buffer.alloc(4);
     tagSize.writeUIntBE(message.chunkData.length + 11, 0, 4);
+
+    const toWrite = Buffer.concat([tag, message.chunkData, tagSize]);
+
+    this.video.write(toWrite);
     
-    this.video.write(tag);    
-    this.video.write(message.chunkData);
-    this.video.write(tagSize);
-    
+    this.transcodeToHLS(toWrite);
+  }
+
+  onAudio(message) {
+    this.writeTag(0x08, message);
   }
 
   onVideo(message) {
-    
-    let tag = Buffer.alloc(11);
-    tag.writeUIntBE(0x09, 0, 1);
-    tag.writeUIntBE(message.chunkData.length, 1, 3);
-    let timestamp = Buffer.alloc(4);
-    timestamp.writeUIntBE(message.timestamp, 0, 4);
-    tag[4] = (message.timestamp >> 16) & 0xff;
-    tag[5] = (message.timestamp >> 8) & 0xff;
-    tag[6] = message.timestamp & 0xff;
-    tag[7] = (message.timestamp >> 24) & 0xff;
-    tag.writeUIntBE(0x00, 8, 3);
-        
-    let tagSize = Buffer.alloc(4);
-    tagSize.writeUIntBE(message.chunkData.length + 11, 0, 4);
-    
-    this.video.write(tag);    
-    this.video.write(message.chunkData);
-    this.video.write(tagSize);
-    
-    
-    
+    this.writeTag(0x09, message);
   }
 
   onDataMessage(message) {
@@ -123,8 +139,10 @@ class StreamReceiver {
       }
       case 'close':
       // NetConnection.Connect.Closed;
+        break;
       case 'call':
       // Reject
+        break;
       case 'createStream': {
       /*
         String _result
@@ -165,7 +183,6 @@ class StreamReceiver {
         break;
       }
       case 'publish': {
-        // onStatus
         const onStatus = RTMPMessages.generateMessage(20, 1, amfEncoder.encodeAMF0([
           'onStatus',
           message[1],
@@ -181,20 +198,25 @@ class StreamReceiver {
       }
       case 'FCUnpublish': {
         this.video.end();
+        this.ffmpeg.stdin.end();
       }
     }
   }
-  // connect ->
-  // <-  _result
-  // releaseStream ->
-  // FCPublish ->
-  // <- onFCPublish
-  // <- _result
-  // <- Stream Begin
-  // Publish ->
-  // <- onStatus
-  // setDataFrame ->
-  // audio/vid ->
+
+
+  /*
+   connect ->
+   <-  _result
+   releaseStream ->
+   FCPublish ->
+   <- onFCPublish
+   <- _result
+   <- Stream Begin
+   Publish ->
+   <- onStatus
+   setDataFrame ->
+   audio/vid ->
+ */
 }
 
 module.exports = StreamReceiver;

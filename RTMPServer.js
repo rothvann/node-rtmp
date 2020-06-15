@@ -1,6 +1,5 @@
 const net = require('net');
 const EventEmitter = require('events');
-const StreamReceiver = require('./StreamReceiver');
 const RTMPConnection = require('./RTMPConnection');
 const RTMPChunkStream = require('./RTMPChunkStream');
 const RTMPMessageStream = require('./RTMPMessageStream');
@@ -19,7 +18,6 @@ class RTMPServer extends EventEmitter {
       const rtmpConnection = new RTMPConnection(socket, messageStream);
       this.emit('connection', rtmpConnection);
     });
-
 
     this.tcpServer.listen(this.port);
   }

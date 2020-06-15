@@ -28,7 +28,6 @@ function generateTimestamp() {
   return timestamp;
 }
 
-// In case rtmp verions > 3 are implemented
 function generateS0() {
   return S0;
 }
