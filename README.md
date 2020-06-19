@@ -1,5 +1,15 @@
 # node-rtmp
+## Usage
+```
+const RTMPServer = require('./RTMPServer');
+const StreamReceiver = require('./StreamReceiver');
 
+const server = new RTMPServer();
+server.on('connection', (connection) => {
+  const handler = new StreamReceiver(connection);
+});
+```
+StreamReceiver currently spawns instances of ffmpeg and transcodes the stream to HLS variants.
 
 ## TODO
 
@@ -11,6 +21,7 @@
 - [x] Encoding and sending message on chunk stream
 - [x] Handling User Control Messages (id 4)
 - [x] Multiplex data to flv file
+- [ ] Config for server (So no new code needs to be written for simple usage)
 - [ ] Sample site (Twitch clone)
 - [ ] HLS
 - [ ] Add common responses / messages to RTMPMessages
