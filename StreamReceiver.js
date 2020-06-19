@@ -6,18 +6,12 @@ const RTMPMessages = require('./RTMPMessages');
 
 class StreamReceiver {
   constructor(rtmpConnection) {
-    this.states = {
-      WAITING: 0,
-      CONNECTED: 1,
-      RECEIVING: 2,
-    };
-    this.state = this.states.WAITING;
     this.rtmpConnection = rtmpConnection;
 
-    this.rtmpConnection.registerHandler('Command Message', (message) => { this.onCommandMessage(message); });
-    this.rtmpConnection.registerHandler('Data Message', (message) => { this.onDataMessage(message); });
-    this.rtmpConnection.registerHandler('Video', (data) => { this.onVideo(data); });
-    this.rtmpConnection.registerHandler('Audio', (data) => { this.onAudio(data); });
+    this.rtmpConnection.on('Command Message', (message) => { this.onCommandMessage(message); });
+    this.rtmpConnection.on('Data Message', (message) => { this.onDataMessage(message); });
+    this.rtmpConnection.on('Video', (message) => { this.onVideo(message); });
+    this.rtmpConnection.on('Audio', (message) => { this.onAudio(message); });
     this.video = fs.createWriteStream('test.flv');
 
     this.configureTranscoder();
@@ -81,7 +75,7 @@ class StreamReceiver {
   writeTag(tagType, message) {
     const tag = Buffer.alloc(11);
     tag.writeUIntBE(tagType, 0, 1);
-    tag.writeUIntBE(message.chunkData.length, 1, 3);
+    tag.writeUIntBE(message.data.length, 1, 3);
     const timestamp = Buffer.alloc(4);
     timestamp.writeUIntBE(message.timestamp, 0, 4);
     tag[4] = (message.timestamp >> 16) & 0xff;
@@ -91,9 +85,9 @@ class StreamReceiver {
     tag.writeUIntBE(0x00, 8, 3);
 
     const tagSize = Buffer.alloc(4);
-    tagSize.writeUIntBE(message.chunkData.length + 11, 0, 4);
+    tagSize.writeUIntBE(message.data.length + 11, 0, 4);
 
-    const toWrite = Buffer.concat([tag, message.chunkData, tagSize]);
+    const toWrite = Buffer.concat([tag, message.data, tagSize]);
 
     this.video.write(toWrite);
     

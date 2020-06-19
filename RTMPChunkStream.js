@@ -87,10 +87,10 @@ class RTMPChunkStream extends EventEmitter {
     const { fmt, chunkStreamId } = basicHeader;
     currentState.fmt = fmt;
     currentState.chunkStreamId = chunkStreamId;
-    let chunkDataStart = this.fmtSize[fmt];
+    let dataStart = this.fmtSize[fmt];
 
     // Check if data is received yet
-    if (chunkDataStart > this.data.length) {
+    if (dataStart > this.data.length) {
       currentState.sizeRead = 0;
       return currentState;
     }
@@ -100,7 +100,7 @@ class RTMPChunkStream extends EventEmitter {
         let timestamp = this.data.readUIntBE(0, 3);
         // if equals to 0xFFFFFF
         if (timestamp >= 16777215) {
-          chunkDataStart = 15;
+          dataStart = 15;
           // get extended
           timestamp = this.data.readUIntBE(11, 4);
           currentState.haveExtended = true;
@@ -123,7 +123,7 @@ class RTMPChunkStream extends EventEmitter {
         let timestampDelta = this.data.readUIntBE(0, 3);
 
         if (timestampDelta >= 16777215) {
-          chunkDataStart = 11;
+          dataStart = 11;
           timestampDelta = this.data.readUIntBE(7, 4);
           currentState.haveExtended = true;
         } else {
@@ -148,7 +148,7 @@ class RTMPChunkStream extends EventEmitter {
         let timestampDelta = this.data.readUIntBE(0, 3);
 
         if (timestampDelta >= 16777215) {
-          chunkDataStart = 7;
+          dataStart = 7;
           timestampDelta = this.data.readUIntBE(3, 4);
           currentState.haveExtended = true;
         } else {
@@ -166,7 +166,7 @@ class RTMPChunkStream extends EventEmitter {
       }
       case 3: {
         if (currentState.haveExtended) {
-          chunkDataStart = 4;
+          dataStart = 4;
           const timestampDelta = this.data.readUIntBE(0, 4);
 
           if (currentState.prevStatefulChunkType > 0) {
@@ -179,7 +179,7 @@ class RTMPChunkStream extends EventEmitter {
 
         // check if new message
 
-        if (currentState.length === currentState.chunkData.length) {
+        if (currentState.length === currentState.data.length) {
           if (currentState.prevStatefulChunkType === 0) {
             currentState.timestampDelta = currentState.timestamp;
             currentState.timestamp += currentState.timestampDelta;
@@ -189,13 +189,13 @@ class RTMPChunkStream extends EventEmitter {
         } else {
           // continuation
           // TODO: Ugly. Add remaining length parameter somewhere and use instead.
-          const remainingLength = currentState.length - currentState.chunkData.length;
+          const remainingLength = currentState.length - currentState.data.length;
 
           const length = Math.min(remainingLength, this.maxChunkSize);
-          const chunkData = this.data.slice(chunkDataStart, chunkDataStart + length);
-          currentState.chunkData = Buffer.concat([currentState.chunkData, chunkData]);
-          currentState.sizeRead = chunkDataStart + length;
-          currentState.header = this.data.slice(0, chunkDataStart);
+          const data = this.data.slice(dataStart, dataStart + length);
+          currentState.data = Buffer.concat([currentState.data, data]);
+          currentState.sizeRead = dataStart + length;
+          currentState.header = this.data.slice(0, dataStart);
           return currentState;
         }
 
@@ -204,10 +204,10 @@ class RTMPChunkStream extends EventEmitter {
     }
 
     const length = Math.min(currentState.length, this.maxChunkSize);
-    const chunkData = this.data.slice(chunkDataStart, chunkDataStart + length);
-    currentState.chunkData = chunkData;
-    currentState.sizeRead = chunkDataStart + length;
-    currentState.header = this.data.slice(0, chunkDataStart);
+    const data = this.data.slice(dataStart, dataStart + length);
+    currentState.data = data;
+    currentState.sizeRead = dataStart + length;
+    currentState.header = this.data.slice(0, dataStart);
     return currentState;
   }
 
@@ -218,12 +218,12 @@ class RTMPChunkStream extends EventEmitter {
     if (currentState.sizeRead === 0) {
       return 0;
     }
-    if (currentState.length === currentState.chunkData.length) {
+    if (currentState.length === currentState.data.length) {
       if (currentState.typeId <= 2 && basicHeader.chunkStreamId === 2 && currentState.streamId === 0) {
         this.parseProtocolControlMessage(currentState);
       } else {
         this.emit('message', currentState);
-        currentState.chunkData = Buffer.from([]);
+        currentState.data = Buffer.from([]);
       }
     }
 
@@ -234,7 +234,7 @@ class RTMPChunkStream extends EventEmitter {
     switch (message.typeId) {
       case 1: {
         // chunks can't be larger than messages and messages can't be larger than 2^24 bytes
-        const size = message.chunkData.readUIntBE(0, 4);
+        const size = message.data.readUIntBE(0, 4);
         this.maxChunkSize = Math.min(size, 0xFFFFFF);
         this.chunkEncoder.setMaxChunkSize(this.maxChunkSize);
         break;

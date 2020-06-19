@@ -46,7 +46,7 @@ class RTMPConnection {
     });
   }
 
-  registerHandler(event, handler) {
+  on(event, handler) {
     this.messageStream.on(event, handler);
   }
 
