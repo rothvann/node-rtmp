@@ -4,6 +4,7 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const RTMPMessages = require('./RTMPMessages');
 
+//TODO: change states so streams only work once. Thumbnail generation / get master playlist
 class StreamServer {
   constructor(rtmpConnection) {
     this.rtmpConnection = rtmpConnection;
@@ -21,17 +22,15 @@ class StreamServer {
   }
   
   configureTranscoder() {
-    //TODO: create master playlist
     /*
-      #EXTM3U
-      #EXT-X-STREAM-INF:BANDWIDTH=150000,RESOLUTION=416x234,CODECS="avc1.42e00a,mp4a.40.2"
-      http://example.com/low/index.m3u8
+      Correct bitrate limits  for video sizes
     */
-   
+    
     let config = `-i pipe:0 -loglevel debug
+    -filter_complex [0:v]split=5[in0][in1][in2][in3][in4];[in4]fps=fps=1[thumb]
+    -map [thumb] thumbnail%005d.jpg
     -profile:v main -preset veryfast -c:v libx264
-    -filter_complex [0:v]split=4[in0][in1][in2][in3]
-    -map [in0] -map [in1] -map [in2] -map [in3] 
+    -map [in0] -map [in1] -map [in2] -map [in3]
     -s:v:0 1920x1080 -r:v:0 30 -b:v:0 2000k
     -s:v:1 1280x720 -r:v:1 30 -b:v:1 2000k
     -s:v:2 1280x720 -r:v:2 30 -b:v:2 2000k
@@ -72,10 +71,12 @@ class StreamServer {
     // set peer bandwidth, window ack size, stream begin, set chunk size
     this.rtmpConnection.writeMessage(RTMPMessages.generateWindowAcknowledgementSize(2500000));
     this.rtmpConnection.writeMessage(RTMPMessages.generateSetPeerBandwidth(2500000, 2));
+    
     const streamIdBuffer = Buffer.alloc(4);
     streamIdBuffer.writeUIntBE(this.currentStreamId, 0, 4);
     this.currentStreamId += 1;
     const streamBegin = RTMPMessages.generateUserControlMessage(0, streamIdBuffer);
+    
     this.rtmpConnection.writeMessage(streamBegin);
     this.rtmpConnection.writeMessage(RTMPMessages.generateSetChunkSize(4096));
   }
