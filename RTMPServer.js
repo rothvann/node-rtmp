@@ -6,12 +6,12 @@ const RTMPMessageStream = require('./RTMPMessageStream');
 
 
 class RTMPServer extends EventEmitter {
-  constructor() {
+  constructor(url='') {
     super();
     this.tcpServer = new net.Server();
 
     this.port = 1935;
-
+    
     this.tcpServer.on('connection', (socket) => {
       const chunkStream = new RTMPChunkStream();
       const messageStream = new RTMPMessageStream(chunkStream);

@@ -26,6 +26,7 @@
     "jest": "^25.5.4"
   },
   "dependencies": {
-    "amf2json": "^1.0.7"
+    "amf2json": "^1.0.7",
+    "express": "^4.17.1"
   }
 }
