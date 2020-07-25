@@ -1,24 +1,27 @@
 const amfEncoder = require('amf2json');
-
 const fs = require('fs');
 const { spawn } = require('child_process');
 const RTMPMessages = require('./RTMPMessages');
+const uuid = require('uuid-random');
 
 //TODO: change states so streams only work once. Thumbnail generation / get master playlist
 class StreamServer {
   constructor(rtmpConnection) {
     this.rtmpConnection = rtmpConnection;
-
     this.rtmpConnection.on('Command Message', (message) => { this.onCommandMessage(message); });
     this.rtmpConnection.on('Data Message', (message) => { this.onDataMessage(message); });
     this.rtmpConnection.on('Video', (message) => { this.onVideo(message); });
     this.rtmpConnection.on('Audio', (message) => { this.onAudio(message); });
-    this.video = fs.createWriteStream('test.flv');
+    
+    
+    this.uuid = uuid();
 
+    this.video = fs.createWriteStream('test.flv');
     this.configureTranscoder();
     
     this.configureFLVHeader();
     this.currentStreamId = 0;
+    
   }
   
   configureTranscoder() {
@@ -26,9 +29,12 @@ class StreamServer {
       Correct bitrate limits  for video sizes
     */
     
+    fs.mkdirSync(`streams/${this.uuid}/thumbnail`, { recursive : true });
+    
+    //Generate command from list
     let config = ` -y -i pipe:0 -loglevel debug
     -filter_complex [0:v]split=5[in0][in1][in2][in3][in4];[in4]fps=fps=1/5[thumb]
-    -map [thumb] -update 1 thumbnail/thumbnail.jpg
+    -map [thumb] -update 1 streams/${this.uuid}/thumbnail/thumbnail.jpg
     -profile:v main -preset veryfast -c:v libx264
     -map [in0] -map [in1] -map [in2] -map [in3]
     -s:v:0 1920x1080 -r:v:0 30 -b:v:0 2000k
@@ -40,10 +46,11 @@ class StreamServer {
     config.push('-var_stream_map', 'v:0,a:0 v:1,a:1 v:2,a:2 v:3,a:3');
     config = config.concat(`-master_pl_name master.m3u8    
     -f hls -hls_list_size 0 
-    -hls_segment_filename v%v/fileSequence%d.ts
-    v%v/prog_index.m3u8
+    -hls_segment_filename streams/${this.uuid}/v%v/fileSequence%d.ts
+    streams/${this.uuid}/v%v/prog_index.m3u8
     `.split(' ').filter(option => option.length > 0  & option != '\n').map(option => option.trim()));
     console.log(config);
+    
     this.ffmpeg = spawn('ffmpeg.exe', config);
     this.ffmpeg.stderr.on('data', err => {
       console.log(err.toString());
