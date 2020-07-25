@@ -26,9 +26,9 @@ class StreamServer {
       Correct bitrate limits  for video sizes
     */
     
-    let config = `-i pipe:0 -loglevel debug
-    -filter_complex [0:v]split=5[in0][in1][in2][in3][in4];[in4]fps=fps=1[thumb]
-    -map [thumb] thumbnail%005d.jpg
+    let config = ` -y -i pipe:0 -loglevel debug
+    -filter_complex [0:v]split=5[in0][in1][in2][in3][in4];[in4]fps=fps=1/5[thumb]
+    -map [thumb] -update 1 thumbnail/thumbnail.jpg
     -profile:v main -preset veryfast -c:v libx264
     -map [in0] -map [in1] -map [in2] -map [in3]
     -s:v:0 1920x1080 -r:v:0 30 -b:v:0 2000k
