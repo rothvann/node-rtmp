@@ -4,7 +4,6 @@ const { spawn } = require('child_process');
 const RTMPMessages = require('./RTMPMessages');
 const uuid = require('uuid-random');
 
-//TODO: change states so streams only work once. Thumbnail generation / get master playlist
 class StreamServer {
   constructor(rtmpConnection) {
     this.rtmpConnection = rtmpConnection;
@@ -16,20 +15,22 @@ class StreamServer {
     
     this.uuid = uuid();
 
-    this.video = fs.createWriteStream('test.flv');
+    fs.mkdirSync(`streams/${this.uuid}`, { recursive : true });
+    this.video = fs.createWriteStream(`streams/${this.uuid}/raw.flv`);
     this.configureTranscoder();
     
     this.configureFLVHeader();
     this.currentStreamId = 0;
-    
+    console.log(`Stream started at id ${this.uuid}`);
   }
   
   configureTranscoder() {
+    //Create thumbnail folder because ffmpeg doesn't automatically make one and will crash
+    fs.mkdirSync(`streams/${this.uuid}/thumbnail`, { recursive : true });
+    
     /*
       Correct bitrate limits  for video sizes
     */
-    
-    fs.mkdirSync(`streams/${this.uuid}/thumbnail`, { recursive : true });
     
     //Generate command from list
     let config = ` -y -i pipe:0 -loglevel debug
@@ -49,12 +50,14 @@ class StreamServer {
     -hls_segment_filename streams/${this.uuid}/v%v/fileSequence%d.ts
     streams/${this.uuid}/v%v/prog_index.m3u8
     `.split(' ').filter(option => option.length > 0  & option != '\n').map(option => option.trim()));
-    console.log(config);
+    //console.log(config);
     
     this.ffmpeg = spawn('ffmpeg.exe', config);
+    /*
     this.ffmpeg.stderr.on('data', err => {
       console.log(err.toString());
     });
+    */
   }
 
   configureFLVHeader() {
@@ -86,6 +89,10 @@ class StreamServer {
     
     this.rtmpConnection.writeMessage(streamBegin);
     this.rtmpConnection.writeMessage(RTMPMessages.generateSetChunkSize(4096));
+  }
+  
+  getUUID() {
+    return this.uuid;
   }
   
   transcodeToHLS(data) {

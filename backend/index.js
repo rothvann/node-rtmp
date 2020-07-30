@@ -1,14 +1,16 @@
 const RTMPServer = require('./RTMPServer');
 const StreamServer = require('./StreamServer');
 const express = require('express');
+const cors = require('cors')
 const http = require('http');
 
 const server = new RTMPServer();
-const streamHandlers = [];
+const streamHandlers = new Map();
 
 const app = express();
+app.use(cors());
 const webServer = http.createServer(app);
-webServer.listen(80);
+webServer.listen(3476);
 
 if(process.env.sslOn) {
   //create https server
@@ -16,12 +18,15 @@ if(process.env.sslOn) {
 
 server.on('connection', (connection) => {
   const handler = new StreamServer(connection);
-  streamHandlers.push(handler);
+  let uuid = handler.getUUID();
+  connection.on('close', () => {
+    streamHandlers.delete(uuid);
+  });
+  streamHandlers.set(uuid, handler);
 });
 
 app.get('/api/stream/list', function(req, res) {
-  streamHandlers.map(handler => {
-    //get stream thumbnails and urls from each
-  });
+  let uuids = [...streamHandlers.keys()]
+  res.json({uuids: uuids});
 });
 

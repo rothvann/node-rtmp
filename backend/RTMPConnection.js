@@ -19,11 +19,15 @@ class RTMPConnection {
     this.socket = socket;
     this.state = this.connectionState.HANDSHAKE_0;
     this.messageStream = messageStream;
-    this.handleData = this.handleData.bind(this);
     this.data = Buffer.from([]);
     this.writeBuffer = Buffer.from([]);
 
-    this.socket.on('data', this.handleData);
+    this.socket.on('close', () => this.messageStream.emitConnectionEvent('close', ''));
+    this.socket.on('data', (data) => this.handleData(data));
+    this.configureAcknowledgement();
+  }
+
+  configureAcknowledgement() {
     this.messageStream.on('Acknowledgement', (size) => { this.unacknowledgedBytes -= size; this.attemptWrite(); });
     this.messageStream.on('Window Acknowledgement Size', (size) => { this.windowSize = size; });
     this.messageStream.on('Set Peer Bandwidth', (bandwidth, limitType) => {

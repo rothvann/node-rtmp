@@ -13,6 +13,6 @@ function HeaderNav(props) {
   )
 }
 
-
+export default HeaderNav;
 
 
