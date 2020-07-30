@@ -2,23 +2,19 @@ const RTMPHandshake = require('./RTMPHandshake');
 const RTMPMessages = require('./RTMPMessages');
 
 class RTMPConnection {
-  constructor(socket, messageStream) {
+  constructor(socket, messageTransport, messageStream) {
     this.connectionState = {
       HANDSHAKE_0: 0,
       HANDSHAKE_1: 1,
       HANDSHAKE_2: 2,
       READY: 3,
     };
-    this.windowSize = 2500000;
-    this.bandwidth = 2500000;
-    this.bandwidthLimitType = null;
-
-    this.bytesReceived = 0;
-    this.unacknowledgedBytes = 0;
-
+    this.messageTransport = messageTransport;
+    this.messageStream = messageStream;
+    this.messageTransport.on('message', (message) => {this.messageStream.onMessage(message)});
+    
     this.socket = socket;
     this.state = this.connectionState.HANDSHAKE_0;
-    this.messageStream = messageStream;
     this.data = Buffer.from([]);
     this.writeBuffer = Buffer.from([]);
 
@@ -28,6 +24,12 @@ class RTMPConnection {
   }
 
   configureAcknowledgement() {
+    this.windowSize = 2500000;
+    this.bandwidth = 2500000;
+    this.bandwidthLimitType = null;
+
+    this.bytesReceived = 0;
+    this.unacknowledgedBytes = 0;
     this.messageStream.on('Acknowledgement', (size) => { this.unacknowledgedBytes -= size; this.attemptWrite(); });
     this.messageStream.on('Window Acknowledgement Size', (size) => { this.windowSize = size; });
     this.messageStream.on('Set Peer Bandwidth', (bandwidth, limitType) => {
@@ -56,7 +58,7 @@ class RTMPConnection {
 
   writeMessage(message) {
     // make sure not to send messages past bandwidth limit
-    const data = this.messageStream.encodeMessage(message);
+    const data = this.messageTransport.encodeMessage(message);
     this.writeBuffer = Buffer.concat([this.writeBuffer, data]);
     this.attemptWrite();
   }
@@ -80,7 +82,7 @@ class RTMPConnection {
       this.bytesReceived = 0;
     }
     if (this.state == this.connectionState.READY) {
-      this.messageStream.onData(data);
+      this.messageTransport.onData(data);
     } else {
       this.data = Buffer.concat([this.data, data]);
       while (this.data.length > 0) {
@@ -108,7 +110,7 @@ class RTMPConnection {
             }
             this.data = this.data.slice(RTMPHandshake.SIZE);
             this.state = this.connectionState.READY;
-            this.messageStream.onData(this.data);
+            this.messageTransport.onData(this.data);
             this.data = Buffer.from([]);
             return;
           default:

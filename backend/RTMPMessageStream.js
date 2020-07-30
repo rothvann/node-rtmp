@@ -2,16 +2,12 @@ const EventEmitter = require('events');
 const RTMPMessageStreamHandler = require('./RTMPMessageStreamHandler');
 
 class RTMPMessageStream extends EventEmitter {
-  constructor(messageTransport) {
+  constructor() {
     super();
-    this.onMessage.bind(this);
     this.messageStreamHandlers = new Map();
-
-    this.createStream(0);
-
     this.onMessage = this.onMessage.bind(this);
-    this.messageTransport = messageTransport;
-    this.messageTransport.on('message', this.onMessage);
+    
+    this.createStream(0);
 
     this.timestamp = 0;
     this.prevTimestamp = 0;
@@ -29,14 +25,6 @@ class RTMPMessageStream extends EventEmitter {
   createStream(streamId) {
     const newStream = new RTMPMessageStreamHandler(this.emit.bind(this));
     this.messageStreamHandlers.set(streamId, newStream);
-  }
-
-  encodeMessage(message) {
-    return this.messageTransport.encodeMessage(message);
-  }
-
-  onData(data) {
-    this.messageTransport.onData(data);
   }
 
   onMessage(message) {
