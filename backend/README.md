@@ -1,4 +1,7 @@
 # node-rtmp
+
+Uses AMF library at https://github.com/SwampApe/node-amf
+
 ## Usage
 ```
 const RTMPServer = require('./RTMPServer');
